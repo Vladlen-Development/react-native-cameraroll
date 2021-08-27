@@ -36,7 +36,8 @@ export type Include =
   | 'fileSize'
   | 'location'
   | 'imageSize'
-  | 'playableDuration';
+  | 'playableDuration'
+  | 'orientation';
 
 /**
  * Shape of the param arg for the `getPhotos` function.
@@ -103,6 +104,7 @@ export type PhotoIdentifier = {
       width: number,
       fileSize: number | null,
       playableDuration: number,
+      orientation: number | null,
     },
     timestamp: number,
     location: {
@@ -180,11 +182,11 @@ class CameraRoll {
     );
     invariant(
       options.type === 'photo' ||
-        options.type === 'video' ||
-        options.type === 'auto' ||
-        options.type === undefined,
+      options.type === 'video' ||
+      options.type === 'auto' ||
+      options.type === undefined,
       `The second argument to saveToCameraRoll must be 'photo' or 'video' or 'auto'. You passed ${type ||
-        'unknown'}`,
+      'unknown'}`,
     );
     if (type === 'auto') {
       if (['mov', 'mp4'].indexOf(tag.split('.').slice(-1)[0]) >= 0) {
