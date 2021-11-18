@@ -17,6 +17,8 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
@@ -380,29 +382,53 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
       ContentResolver resolver = mContext.getContentResolver();
 
       try {
-        // set LIMIT to first + 1 so that we know how to populate page_info
-        String limit = "limit=" + (mFirst + 1);
+        String[] projection;
+        String[] selectionArgsArray = selectionArgs.toArray(new String[selectionArgs.size()]);
+        String selectionString = selection.toString();
+        String sortString = Images.Media.DATE_ADDED + " DESC, " + Images.Media.DATE_MODIFIED + " DESC";
 
-        if (!TextUtils.isEmpty(mAfter)) {
-          limit = "limit=" + mAfter + "," + (mFirst + 1);
+        Cursor media = null;
+
+        if (mInclude.contains(INCLUDE_ORIENTATION)) {
+          projection = Arrays.copyOf(PROJECTION, PROJECTION.length + 1);
+          projection[projection.length - 1] = MediaStore.Files.FileColumns.ORIENTATION;
+        } else {
+          projection = PROJECTION;
         }
 
-         String[] projection;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          Bundle selectionBundle = new Bundle();
+          selectionBundle.putInt(ContentResolver.QUERY_ARG_LIMIT, mFirst + 1);
+          selectionBundle.putInt(ContentResolver.QUERY_ARG_OFFSET, 0);
+          selectionBundle.putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, sortString);
+          selectionBundle.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selectionString);
+          selectionBundle.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgsArray);
 
-         if (mInclude.contains(INCLUDE_ORIENTATION)) {
-            projection = Arrays.copyOf(PROJECTION, PROJECTION.length + 1);
-            projection[projection.length - 1] = MediaStore.Files.FileColumns.ORIENTATION;
-         } else {
-            projection = PROJECTION;
-         }
+          if (!TextUtils.isEmpty(mAfter)) {
+            selectionBundle.putInt(ContentResolver.QUERY_ARG_OFFSET, Integer.parseInt(mAfter));
+          }
 
+          media = resolver.query(
+                  MediaStore.Files.getContentUri("external"),
+                  projection,
+                  selectionBundle,
+                  null
+          );
+        } else {
+          // set LIMIT to first + 1 so that we know how to populate page_info
+          String limit = "limit=" + (mFirst + 1);
+          if (!TextUtils.isEmpty(mAfter)) {
+            limit = "limit=" + mAfter + "," + (mFirst + 1);
+          }
 
-        Cursor media = resolver.query(
-            MediaStore.Files.getContentUri("external").buildUpon().encodedQuery(limit).build(),
-            projection,
-            selection.toString(),
-            selectionArgs.toArray(new String[selectionArgs.size()]),
-            Images.Media.DATE_ADDED + " DESC, " + Images.Media.DATE_MODIFIED + " DESC");
+          media = resolver.query(
+                  MediaStore.Files.getContentUri("external").buildUpon().encodedQuery(limit).build(),
+                  projection,
+                  selectionString,
+                  selectionArgsArray,
+                  sortString
+          );
+        }
         if (media == null) {
           mPromise.reject(ERROR_UNABLE_TO_LOAD, "Could not get media");
         } else {
