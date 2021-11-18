@@ -5,6 +5,11 @@
 ![MIT License][license-badge]
 [![Lean Core Badge][lean-core-badge]][lean-core-issue]
 
+### Fork changes
+- [x] Support Android SDK 30
+- [x] Support pagination on Samsung devices
+- [x] Fix orientation on Android devices
+
 ## Getting started
 
 `$ npm install @react-native-community/cameraroll --save`
